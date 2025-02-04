@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca Online</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>📚 Biblioteca Online</h1>
+        <nav>
+            <a href="{{ url_for('login') }}" class="btn">🔑 Login</a>
+        </nav>
+    </header>
+    <main>
+        <h2> Livros Disponíveis</h2>
+        <ul class="book-list">
+            {% if livros %}
+                {% for livro in livros %}
+                    <li class="livro-item {{ 'disponivel' if livro.disponivel else 'emprestado' }}">
+                        <span>{{ livro.titulo }} - {{ livro.autor }}</span>
+                        <span class="status">{{ "✅ Disponível" if livro.disponivel else "❌ Emprestado" }}</span>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <p class="no-books">Nenhum livro disponível no momento.</p>
+            {% endif %}
+        </ul>
+    </main>
+    <footer>
+        <p>📚 Biblioteca Online - Desenvolvido por Marcus e Joaquim 🚀</p>
+    </footer>
+</body>
+</html>

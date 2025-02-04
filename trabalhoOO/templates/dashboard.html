@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>📚 Dashboard da Biblioteca</h1>
+        <nav>
+            <a href="{{ url_for('logout') }}" class="btn logout">🚪 Logout</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Gerenciamento de Livros</h2>
+        <ul class="book-list">
+            {% if livros %}
+                {% for livro in livros %}
+                    <li class="{{ 'disponivel' if livro.disponivel else 'emprestado' }}">
+                        <span>{{ livro.titulo }} - {{ livro.autor }}</span>
+                        {% if livro.disponivel %}
+                            <a href="{{ url_for('emprestar', titulo=livro.titulo|urlencode) }}" class="btn">📖 Emprestar</a>
+                        {% else %}
+                            <a href="{{ url_for('devolver', titulo=livro.titulo|urlencode) }}" class="btn devolver">📚 Devolver</a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            {% else %}
+                <p>Nenhum livro disponível.</p>
+            {% endif %}
+        </ul>
+    </main>
+
+    <!-- Importação do Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.js"></script>
+
+    <!-- Script para impedir a rolagem ao topo e atualizar os livros dinamicamente -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".btn").forEach(button => {
+                button.addEventListener("click", function (event) {
+                    event.preventDefault(); // Impede a rolagem ao topo
+
+                    const url = this.getAttribute("href");
+
+                    fetch(url, { method: "GET" }) // Faz a requisição para o servidor
+                        .then(response => response.json()) // Espera um JSON de resposta
+                        .then(data => {
+                            atualizarListaLivros(data.livros); // Atualiza apenas a lista, sem reload
+                        })
+                        .catch(error => console.error("Erro:", error));
+                });
+            });
+
+            // Script para Logout assíncrono
+            document.querySelector(".logout").addEventListener("click", function (event) {
+                event.preventDefault(); // Evita o comportamento padrão do link
+
+                fetch(this.getAttribute("href"), { method: "GET" }) // Chama o logout no Flask
+                    .then(() => {
+                        window.location.href = "/"; // Redireciona para a página inicial
+                    })
+                    .catch(error => console.error("Erro ao sair:", error));
+            });
+        });
+
+        // Atualiza a lista de livros sem recarregar a página
+        function atualizarListaLivros(livros) {
+            const bookList = document.querySelector(".book-list");
+            bookList.innerHTML = ""; // Limpa a lista atual
+
+            livros.forEach(livro => {
+                const li = document.createElement("li");
+                li.className = livro.disponivel ? "disponivel" : "emprestado"; // Define a classe correta
+                li.innerHTML = `
+                    <span>${livro.titulo} - ${livro.autor}</span>
+                    ${livro.disponivel 
+                        ? `<a href="/emprestar/${encodeURIComponent(livro.titulo)}" class="btn">📖 Emprestar</a>` 
+                        : `<a href="/devolver/${encodeURIComponent(livro.titulo)}" class="btn devolver">📚 Devolver</a>`}
+                `;
+
+                bookList.appendChild(li);
+            });
+
+            // Reatribui os eventos de clique aos novos botões
+            document.querySelectorAll(".btn").forEach(button => {
+                button.addEventListener("click", function (event) {
+                    event.preventDefault(); // Impede a rolagem ao topo ao clicar nos novos botões
+
+                    const url = this.getAttribute("href");
+
+                    fetch(url, { method: "GET" })
+                        .then(response => response.json())
+                        .then(data => {
+                            atualizarListaLivros(data.livros);
+                        })
+                        .catch(error => console.error("Erro:", error));
+                });
+            });
+        }
+
+        // Atualiza os livros automaticamente quando há mudanças no servidor
+        var socket = io();
+        socket.on('livros_atualizados', function(livros) {
+            atualizarListaLivros(livros); // Atualiza os livros sem recarregar a página
+        });
+    </script>
+
+</body>
+</html>
